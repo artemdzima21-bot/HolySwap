@@ -15,6 +15,3 @@
 gradle build
 ```
 Готовый jar: `build/libs/`.
-
-## Загрузки
-[Modrinth](https://modrinth.com/mod/holyswap) — Fabric / Quilt / Forge / NeoForge, MC 1.16.5–1.21.11.
