@@ -1,0 +1,24 @@
+plugins {
+    id 'eclipse'
+    id 'net.minecraftforge.gradle' version '[5.0,6.0)'
+}
+
+version = '1.0.0'
+group = 'com.holyswap'
+
+archivesBaseName = 'holyswap-forge-1.16.5'
+
+minecraft {
+    mappings channel: 'official', version: '1.16.5'
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.16.5-36.2.42'
+}
+
+sourceCompatibility = '8'
+targetCompatibility = '8'
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

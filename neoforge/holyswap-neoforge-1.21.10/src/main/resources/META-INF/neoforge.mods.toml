@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+issueTrackerURL=""
+clientSideOnly=true
+
+[[mods]]
+modId="holyswap"
+version="1.0.0"
+displayName="HolySwap"
+logoFile="icon.png"
+authors="artemdzima21"
+description='''Клиентский мод: свап предмета во вторую руку одной кнопкой. Свои клавиши на категории предметов. Не чит — тот же пакет, что и ванильная клавиша F.'''
+
+[[dependencies.holyswap]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.10.64,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.holyswap]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.10,)"
+    ordering="NONE"
+    side="CLIENT"

@@ -1,0 +1,8 @@
+pluginManagement {
+    repositories {
+        maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+rootProject.name = 'holyswap-neoforge-1.21.10'
