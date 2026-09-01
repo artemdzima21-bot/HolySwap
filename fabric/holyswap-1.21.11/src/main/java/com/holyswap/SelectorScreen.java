@@ -85,7 +85,7 @@ public class SelectorScreen extends Screen {
         super.render(g, mouseX, mouseY, delta);
         int px = panelX(), py = panelY(), pw = PANEL_W, ph = panelH();
         g.fill(0, 0, this.width, this.height, UiTheme.BG);
-        UiTheme.panel(g, px, py, pw, ph, UiTheme.ACCENT);
+        UiTheme.panel(g, px, py, pw, ph);
         UiTheme.hGradient(g, px + 2, py + 2, pw - 4, 2, UiTheme.ACCENT_2, UiTheme.ACCENT);
 
         // шапка
@@ -137,13 +137,12 @@ public class SelectorScreen extends Screen {
             if (hover) hoveredRow = i;
 
             // карточка строки
-            g.fill(listX() + 1, y + 1, listX() + listW() - 1, y + ROW_H - 1,
-                    hover ? UiTheme.ROW_HOVER : UiTheme.ROW);
+            UiTheme.rowBg(g, listX(), y, listW(), ROW_H);
             if (selected) {
                 g.fill(listX() + 1, y + 1, listX() + 3, y + ROW_H - 1, UiTheme.GOOD);
             } else if (hover) {
                 g.fill(listX() + 1, y + 1, listX() + listW() - 1, y + 2,
-                        (UiTheme.ACCENT & 0x00FFFFFF) | 0x50000000);
+                        (UiTheme.ACCENT & 0x00FFFFFF) | 0x60000000);
             }
 
             // иконка предмета
@@ -176,8 +175,7 @@ public class SelectorScreen extends Screen {
 
     private void footBtn(GuiGraphics g, int id, String label, int x, int y, int w) {
         boolean hover = hoverBtn == id;
-        int accent = id == 2 ? UiTheme.DANGER : UiTheme.ACCENT;
-        UiTheme.button(g, x, y, w, 18, hover, accent);
+        UiTheme.button(g, x, y, w, 18);
         g.drawCenteredString(font, Component.literal(label), x + w / 2, y + 5,
                 hover ? UiTheme.TEXT : UiTheme.TEXT_DIM);
     }

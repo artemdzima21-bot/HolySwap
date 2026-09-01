@@ -71,7 +71,7 @@ public class KeysScreen extends Screen {
         super.render(g, mouseX, mouseY, delta);
         int px = panelX(), py = panelY(), pw = PANEL_W, ph = panelH();
         g.fill(0, 0, this.width, this.height, UiTheme.BG);
-        UiTheme.panel(g, px, py, pw, ph, UiTheme.ACCENT);
+        UiTheme.panel(g, px, py, pw, ph);
         UiTheme.hGradient(g, px + 2, py + 2, pw - 4, 2, UiTheme.ACCENT_2, UiTheme.ACCENT);
 
         String logo = Component.translatable("holyswap.screen.keys.title").getString();
@@ -91,8 +91,7 @@ public class KeysScreen extends Screen {
             if (hover) hoveredRow = i;
             boolean isListening = listening == i;
 
-            g.fill(listX() + 1, y + 1, listX() + listW() - 1, y + ROW_H - 1,
-                    isListening ? 0x3322D3EE : (hover ? UiTheme.ROW_HOVER : UiTheme.ROW));
+            UiTheme.rowBg(g, listX(), y, listW(), ROW_H);
             g.fill(listX() + 1, y + 1, listX() + 3, y + ROW_H - 1,
                     isListening ? UiTheme.ACCENT_2 : act.color());
 
@@ -109,17 +108,12 @@ public class KeysScreen extends Screen {
                 keyName = "—";
                 keyColor = UiTheme.TEXT_DIM;
             } else {
-                keyName = SwapLogic.keyName(code, "—");
+                keyName = keyDisplayName(code);
                 keyColor = UiTheme.ACCENT_2;
             }
             int chipW = Math.max(26, font.width(keyName) + 12);
             int chipX = listX() + listW() - chipW - 7;
-            g.fill(chipX + 1, y + 4, chipX + chipW - 1, y + ROW_H - 4, UiTheme.PANEL_2);
-            int border = isListening ? UiTheme.ACCENT_2 : ((UiTheme.ACCENT & 0x00FFFFFF) | 0x60000000);
-            g.fill(chipX + 1, y + 4, chipX + chipW - 1, y + 5, border);
-            g.fill(chipX + 1, y + ROW_H - 5, chipX + chipW - 1, y + ROW_H - 4, border);
-            g.fill(chipX, y + 5, chipX + 1, y + ROW_H - 5, border);
-            g.fill(chipX + chipW - 1, y + 5, chipX + chipW, y + ROW_H - 5, border);
+            UiTheme.chip(g, chipX, y + 4, chipW, ROW_H - 8);
             g.drawCenteredString(font, Component.literal(keyName), chipX + chipW / 2, y + 9, keyColor);
             y += ROW_H;
         }
@@ -134,9 +128,15 @@ public class KeysScreen extends Screen {
 
     private void footBtn(GuiGraphics g, int id, String label, int x, int y, int w) {
         boolean hover = hoverBtn == id;
-        UiTheme.button(g, x, y, w, 18, hover, UiTheme.ACCENT);
+        UiTheme.button(g, x, y, w, 18);
         g.drawCenteredString(font, Component.literal(label), x + w / 2, y + 5,
                 hover ? UiTheme.TEXT : UiTheme.TEXT_DIM);
+    }
+
+    private static String keyDisplayName(int code) {
+        if (code == GLFW.GLFW_KEY_UNKNOWN) return "—";
+        String s = GLFW.glfwGetKeyName(code, 0);
+        return (s == null || s.isEmpty()) ? "K" + code : s.toUpperCase();
     }
 
     private boolean rowRect(double mx, double my, int idx) {

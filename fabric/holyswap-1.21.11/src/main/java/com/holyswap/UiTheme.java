@@ -1,54 +1,65 @@
 package com.holyswap;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.Identifier;
 
-/** Палитра и примитивы фирменного интерфейса HolySwap. */
+/** Палитра и примитивы фирменного интерфейса HolySwap (текстуры + 9-slice). */
 public final class UiTheme {
-    public static final int BG       = 0x9005050C;
-    public static final int PANEL    = 0xF410101C;
+    public static final int BG       = 0x8805050C;
     public static final int PANEL_2  = 0xFF181828;
-    public static final int ROW      = 0xFF1C1C2E;
     public static final int ROW_HOVER= 0xFF2A2A46;
-    public static final int ACCENT   = 0xFF8B5CF6; // фиолет
-    public static final int ACCENT_2 = 0xFF22D3EE; // циан
+    public static final int ACCENT   = 0xFF8B5CF6;
+    public static final int ACCENT_2 = 0xFF22D3EE;
     public static final int TEXT     = 0xFFF2F2FA;
     public static final int TEXT_DIM = 0xFF9494AC;
     public static final int GOOD     = 0xFF34D399;
     public static final int DANGER   = 0xFFF87171;
 
+    private static final Identifier TEX_PANEL = Identifier.fromNamespaceAndPath("holyswap", "textures/gui/panel.png");
+    private static final Identifier TEX_ROW   = Identifier.fromNamespaceAndPath("holyswap", "textures/gui/row.png");
+    private static final Identifier TEX_BTN   = Identifier.fromNamespaceAndPath("holyswap", "textures/gui/button.png");
+    private static final Identifier TEX_CHIP  = Identifier.fromNamespaceAndPath("holyswap", "textures/gui/chip.png");
+
     private UiTheme() {}
 
-    /** Скруглённая панель со свечением по контуру. */
-    public static void panel(GuiGraphics g, int x, int y, int w, int h, int accent) {
-        // внешнее свечение (3 слоя)
-        g.fill(x - 3, y - 3, x + w + 3, y + h + 3, (accent & 0x00FFFFFF) | 0x18000000);
-        g.fill(x - 2, y - 2, x + w + 2, y + h + 2, (accent & 0x00FFFFFF) | 0x30000000);
-        // корпус со срезанными углами (2px)
-        g.fill(x + 2, y, x + w - 2, y + h, PANEL);
-        g.fill(x, y + 2, x + w, y + h - 2, PANEL);
-        corner(g, x, y, w, h, PANEL);
-        // рамка со срезанными углами
-        g.fill(x + 2, y, x + w - 2, y + 1, accent);
-        g.fill(x + 1, y + 1, x + w - 1, y + 2, (accent & 0x00FFFFFF) | 0x60000000);
-        g.fill(x + 2, y + h - 1, x + w - 2, y + h, accent);
-        g.fill(x + 1, y + h - 2, x + w - 1, y + h - 1, (accent & 0x00FFFFFF) | 0x60000000);
-        g.fill(x, y + 2, x + 1, y + h - 2, accent);
-        g.fill(x + w - 1, y + 2, x + w, y + h - 2, accent);
+    /** 9-slice: тянем края, углы не трогаем. margin — запечённое свечение вокруг, corner — радиус внутри. */
+    private static void nineSlice(GuiGraphics g, Identifier tex, int x, int y, int w, int h,
+                                  int margin, int corner, int texSize) {
+        int L = margin + corner;                 // размер угловой зоны
+        int TW = texSize;
+        int cx = x - margin, cy = y - margin;    // полный прямоугольник с полями
+        int cw = w + 2 * margin, ch = h + 2 * margin;
+        com.mojang.blaze3d.pipeline.RenderPipeline rl = net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED;
+        // углы
+        g.blit(rl, tex, cx, cy, 0f, 0f, L, L, TW, TW);
+        g.blit(rl, tex, cx + cw - L, cy, TW - L, 0f, L, L, TW, TW);
+        g.blit(rl, tex, cx, cy + ch - L, 0f, TW - L, L, L, TW, TW);
+        g.blit(rl, tex, cx + cw - L, cy + ch - L, TW - L, TW - L, L, L, TW, TW);
+        // края
+        g.blit(rl, tex, cx + L, cy, L, 0f, cw - 2 * L, L, TW, TW);
+        g.blit(rl, tex, cx + L, cy + ch - L, L, TW - L, cw - 2 * L, L, TW, TW);
+        g.blit(rl, tex, cx, cy + L, 0f, L, L, ch - 2 * L, TW, TW);
+        g.blit(rl, tex, cx + cw - L, cy + L, TW - L, L, L, ch - 2 * L, TW, TW);
+        // центр
+        g.blit(rl, tex, cx + L, cy + L, L, L, cw - 2 * L, ch - 2 * L, TW, TW);
     }
 
-    private static void corner(GuiGraphics g, int x, int y, int w, int h, int color) {
-        // убираем 2x2 углы (рисуем поверх фоном нельзя — просто закрашиваем тело без углов не нужно для fill)
+    public static void panel(GuiGraphics g, int x, int y, int w, int h) {
+        nineSlice(g, TEX_PANEL, x, y, w, h, 10, 12, 84);
     }
 
-    /** Вертикальный градиент внутри прямоугольника. */
-    public static void vGradient(GuiGraphics g, int x, int y, int w, int h, int from, int to) {
-        int steps = Math.max(1, h);
-        for (int i = 0; i < steps; i++) {
-            g.fill(x, y + i, x + w, y + i + 1, lerpColor(from, to, i / (float) steps));
-        }
+    public static void rowBg(GuiGraphics g, int x, int y, int w, int h) {
+        nineSlice(g, TEX_ROW, x, y, w, h, 2, 6, 68);
     }
 
-    /** Горизонтальный градиент. */
+    public static void button(GuiGraphics g, int x, int y, int w, int h) {
+        nineSlice(g, TEX_BTN, x, y, w, h, 2, 6, 68);
+    }
+
+    public static void chip(GuiGraphics g, int x, int y, int w, int h) {
+        nineSlice(g, TEX_CHIP, x, y, w, h, 2, 6, 52);
+    }
+
     public static void hGradient(GuiGraphics g, int x, int y, int w, int h, int from, int to) {
         int steps = Math.max(1, w);
         for (int i = 0; i < steps; i++) {
@@ -56,21 +67,6 @@ public final class UiTheme {
         }
     }
 
-    /** Плашка-кнопка со скруглением и свечением при ховере. */
-    public static void button(GuiGraphics g, int x, int y, int w, int h, boolean hover, int accent) {
-        g.fill(x + 1, y, x + w - 1, y + h, hover ? ROW_HOVER : PANEL_2);
-        g.fill(x, y + 1, x + w, y + h - 1, hover ? ROW_HOVER : PANEL_2);
-        int border = hover ? accent : ((accent & 0x00FFFFFF) | 0x50000000);
-        g.fill(x + 1, y, x + w - 1, y + 1, border);
-        g.fill(x + 1, y + h - 1, x + w - 1, y + h, border);
-        g.fill(x, y + 1, x + 1, y + h - 1, border);
-        g.fill(x + w - 1, y + 1, x + w, y + h - 1, border);
-        if (hover) {
-            g.fill(x + 1, y + 1, x + w - 1, y + 2, (accent & 0x00FFFFFF) | 0x40000000);
-        }
-    }
-
-    /** Градиентный текст — по букве от ACCENT_2 к ACCENT. */
     public static void gradientTitle(GuiGraphics g, net.minecraft.client.gui.Font font,
                                      String text, float x, float y) {
         int total = font.width(text);
