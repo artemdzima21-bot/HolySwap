@@ -2,6 +2,7 @@ package com.holyswap;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
@@ -9,37 +10,49 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Экран-селектор в «клиентском» стиле: тёмная панель, градиентный логотип,
- * табы категорий, строки предметов с хайлайтом, кнопки звук/клавиши/закрыть.
- * Вся отрисовка кастомная — клики через hit-test, vanilla-виджеты не используются.
+ * Селектор в фирменном стиле: тёмная панель со свечением, сайдбар категорий,
+ * строки с иконками предметов, плавные акценты. Кастомная отрисовка, без vanilla-виджетов.
  */
 public class SelectorScreen extends Screen {
-    private static final int PANEL_W = 320;
-    private static final int ROW_H = 22;
-    private static final int HEADER = 58;
-    private static final int FOOTER = 34;
+    private static final int PANEL_W = 420;
+    private static final int SIDEBAR_W = 104;
+    private static final int ROW_H = 26;
+    private static final int HEADER = 56;
+    private static final int FOOTER = 40;
 
     private final SwapConfig config;
     private final List<SwapLogic.Row> rows = new ArrayList<>();
     private int scroll = 0;
-    private int tab = -1;                       // -1 = все категории
+    private int tab = -1;
     private int hoveredRow = -1;
-    private boolean hoveringKeys = false, hoveringSound = false, hoveringClose = false;
+    private int hoveredSide = -1;
+    private int hoverBtn = -1; // 0=клавиши 1=звук 2=закрыть
 
     public SelectorScreen(SwapConfig config) {
         super(Component.translatable("holyswap.screen.selector.title"));
         this.config = config;
     }
 
-    private record Tab(String id, String label) {}
+    private record Side(String id, String label, int color) {}
 
-    private List<Tab> tabs() {
-        List<Tab> out = new ArrayList<>();
-        out.add(new Tab("__all", Component.translatable("holyswap.tab.all").getString()));
+    private List<Side> sides() {
+        List<Side> out = new ArrayList<>();
+        out.add(new Side("__all", Component.translatable("holyswap.tab.all").getString(), UiTheme.ACCENT));
         for (SwapLogic.Category c : SwapLogic.Category.values()) {
-            out.add(new Tab("__cat" + c.ordinal(), c.colorTag + c.title()));
+            out.add(new Side("__cat" + c.ordinal(), c.title(), catColor(c)));
         }
         return out;
+    }
+
+    private static int catColor(SwapLogic.Category c) {
+        return switch (c) {
+            case TALISMAN -> 0xFF4ADE80;
+            case TALISMAN_PLUS -> 0xFFFACC15;
+            case SPHERE -> 0xFF38BDF8;
+            case SPHERE_PLUS -> 0xFF818CF8;
+            case TOTEM -> 0xFFF472B6;
+            default -> UiTheme.TEXT_DIM;
+        };
     }
 
     @Override
@@ -58,10 +71,11 @@ public class SelectorScreen extends Screen {
     }
 
     private int panelX() { return (this.width - PANEL_W) / 2; }
-    private int panelY() { return Math.max(10, this.height / 2 - 110); }
-    private int panelH() { return Math.min(this.height - 2 * panelY(), HEADER + FOOTER + ROW_H * 9); }
-    private int listX()  { return panelX() + 10; }
-    private int listW()  { return PANEL_W - 20; }
+    private int panelY() { return Math.max(8, this.height / 2 - 120); }
+    private int panelH() { return Math.min(this.height - 2 * panelY(), HEADER + FOOTER + ROW_H * 10); }
+    private int sideX()  { return panelX() + 10; }
+    private int listX()  { return panelX() + SIDEBAR_W + 8; }
+    private int listW()  { return panelX() + PANEL_W - 10 - listX(); }
     private int listY()  { return panelY() + HEADER; }
     private int listH()  { return panelH() - HEADER - FOOTER; }
     private int maxScroll() { return Math.max(0, visibleRows().size() - listH() / ROW_H); }
@@ -71,37 +85,49 @@ public class SelectorScreen extends Screen {
         super.render(g, mouseX, mouseY, delta);
         int px = panelX(), py = panelY(), pw = PANEL_W, ph = panelH();
         g.fill(0, 0, this.width, this.height, UiTheme.BG);
-        UiTheme.panel(g, px, py, pw, ph);
-        for (int i = 0; i < pw; i++) {
-            g.fill(px + i, py, px + i + 1, py + 2, UiTheme.lerpColor(UiTheme.ACCENT_2, UiTheme.ACCENT, i / (float) pw));
-        }
+        UiTheme.panel(g, px, py, pw, ph, UiTheme.ACCENT);
+        UiTheme.hGradient(g, px + 2, py + 2, pw - 4, 2, UiTheme.ACCENT_2, UiTheme.ACCENT);
 
-        // логотип
+        // шапка
         String logo = "HOLYSWAP";
         int logoW = font.width(logo);
         UiTheme.gradientTitle(g, font, logo, px + (pw - logoW) / 2f, py + 10);
         String hint = Component.translatable("holyswap.screen.selector.hint", config.targets.size()).getString();
-        g.drawCenteredString(font, Component.literal(hint), px + pw / 2, py + 24, UiTheme.TEXT_DIM);
+        g.drawCenteredString(font, Component.literal(hint), px + pw / 2, py + 25, UiTheme.TEXT_DIM);
+        UiTheme.hGradient(g, px + 10, py + HEADER - 5, pw - 20, 1, UiTheme.ACCENT, UiTheme.ACCENT_2);
 
-        // табы категорий
-        int tx = px + 10, ty = py + 36;
-        for (Tab t : tabs()) {
-            int tw = font.width(t.label()) + 12;
-            boolean active = (t.id().equals("__all") && tab == -1)
-                    || (t.id().startsWith("__cat") && tab == Integer.parseInt(t.id().substring(5)));
+        // сайдбар
+        hoveredSide = -1;
+        int sy = listY();
+        List<Side> sides = sides();
+        for (int i = 0; i < sides.size(); i++) {
+            Side s = sides.get(i);
+            boolean active = (s.id().equals("__all") && tab == -1)
+                    || (s.id().startsWith("__cat") && tab == Integer.parseInt(s.id().substring(5)));
+            boolean hover = UiTheme.inRect(mouseX, mouseY, sideX(), sy, SIDEBAR_W - 8, 20);
+            if (hover) hoveredSide = i;
             if (active) {
-                g.fill(tx, ty, tx + tw, ty + 15, UiTheme.PANEL_2);
-                g.fill(tx, ty + 13, tx + tw, ty + 15, UiTheme.ACCENT);
+                g.fill(sideX(), sy, sideX() + SIDEBAR_W - 8, sy + 20, UiTheme.ROW_HOVER);
+                g.fill(sideX(), sy, sideX() + 2, sy + 20, s.color());
+            } else if (hover) {
+                g.fill(sideX(), sy, sideX() + SIDEBAR_W - 8, sy + 20, UiTheme.PANEL_2);
             }
-            g.drawString(font, t.label(), tx + 6, ty + 4, active ? UiTheme.TEXT : UiTheme.TEXT_DIM);
-            tx += tw + 4;
+            g.fill(sideX() + 6, sy + 8, sideX() + 8, sy + 12, s.color());
+            String lbl = UiTheme.ellipsize(font, s.label(), SIDEBAR_W - 24);
+            g.drawString(font, lbl, sideX() + 13, sy + 6,
+                    active ? UiTheme.TEXT : (hover ? UiTheme.TEXT : UiTheme.TEXT_DIM));
+            sy += 22;
         }
-        g.fill(px + 10, py + HEADER - 4, px + pw - 10, py + HEADER - 3, 0x307C4DFF);
 
         // строки предметов
         List<SwapLogic.Row> vis = visibleRows();
         hoveredRow = -1;
         int y = listY();
+        if (vis.isEmpty()) {
+            String empty = Component.translatable("holyswap.screen.empty").getString();
+            g.drawCenteredString(font, Component.literal(empty),
+                    listX() + listW() / 2, listY() + listH() / 2 - 4, UiTheme.TEXT_DIM);
+        }
         for (int i = scroll; i < vis.size(); i++) {
             if (y + ROW_H > listY() + listH()) break;
             SwapLogic.Row row = vis.get(i);
@@ -109,39 +135,51 @@ public class SelectorScreen extends Screen {
             boolean selected = config.targets.contains(match);
             boolean hover = UiTheme.inRect(mouseX, mouseY, listX(), y, listW(), ROW_H);
             if (hover) hoveredRow = i;
-            if (hover) g.fill(listX(), y, listX() + listW(), y + ROW_H, UiTheme.ROW_HOVER);
-            else if ((i - scroll) % 2 == 0) g.fill(listX(), y, listX() + listW(), y + ROW_H, UiTheme.PANEL_2);
-            if (selected) g.fill(listX(), y, listX() + 2, y + ROW_H, UiTheme.GOOD);
 
-            int cx = listX() + 8;
-            g.drawString(font, selected ? "✔" : "·", cx, y + 7,
-                    selected ? UiTheme.GOOD : UiTheme.TEXT_DIM);
-            cx += 12;
-            boolean newCat = i == 0 || vis.get(i - 1).category() != row.category();
-            String tag = newCat ? row.category().colorTag + "[" + row.category().title() + "] " : "   ";
-            g.drawString(font, tag, cx, y + 7, UiTheme.TEXT);
-            cx += font.width(tag);
-            String label = UiTheme.ellipsize(font, row.label(), listX() + listW() - cx - 30);
-            g.drawString(font, label, cx, y + 7, selected ? UiTheme.GOOD : UiTheme.TEXT);
+            // карточка строки
+            g.fill(listX() + 1, y + 1, listX() + listW() - 1, y + ROW_H - 1,
+                    hover ? UiTheme.ROW_HOVER : UiTheme.ROW);
+            if (selected) {
+                g.fill(listX() + 1, y + 1, listX() + 3, y + ROW_H - 1, UiTheme.GOOD);
+            } else if (hover) {
+                g.fill(listX() + 1, y + 1, listX() + listW() - 1, y + 2,
+                        (UiTheme.ACCENT & 0x00FFFFFF) | 0x50000000);
+            }
+
+            // иконка предмета
+            ItemStack icon = row.icon();
+            if (icon != null && !icon.isEmpty()) {
+                g.renderItem(icon, listX() + 6, y + 4);
+            }
+
+            int cx = listX() + 26;
+            String label = UiTheme.ellipsize(font, row.label(), listW() - 60);
+            g.drawString(font, label, cx, y + 9, selected ? UiTheme.GOOD : UiTheme.TEXT);
             String cnt = "x" + row.count();
-            g.drawString(font, cnt, listX() + listW() - font.width(cnt) - 6,
-                    y + 7, UiTheme.TEXT_DIM);
+            g.drawString(font, cnt, listX() + listW() - font.width(cnt) - 8,
+                    y + 9, UiTheme.TEXT_DIM);
+            // цветная точка категории
+            g.fill(listX() + listW() - 22, y + 11, listX() + listW() - 18, y + 15, catColor(row.category()));
             y += ROW_H;
         }
 
         // футер
         int fy = py + ph - FOOTER + 8;
-        drawFooterButton(g, Component.translatable("holyswap.screen.keys_button").getString(),
-                px + 10, fy, 86, hoveringKeys);
-        drawFooterButton(g, soundLabel().getString(), px + 102, fy, 96, hoveringSound);
-        g.drawString(font, "✕", px + pw - 16, fy,
-                hoveringClose ? UiTheme.DANGER : UiTheme.TEXT_DIM);
+        hoverBtn = -1;
+        if (UiTheme.inRect(mouseX, mouseY, px + 10, fy - 3, 92, 18)) hoverBtn = 0;
+        if (UiTheme.inRect(mouseX, mouseY, px + 108, fy - 3, 100, 18)) hoverBtn = 1;
+        if (UiTheme.inRect(mouseX, mouseY, px + pw - 34, fy - 3, 24, 18)) hoverBtn = 2;
+        footBtn(g, 0, Component.translatable("holyswap.screen.keys_button").getString(), px + 10, fy, 92);
+        footBtn(g, 1, soundLabel().getString(), px + 108, fy, 100);
+        footBtn(g, 2, "✕", px + pw - 34, fy, 24);
     }
 
-    private void drawFooterButton(GuiGraphics g, String label, int x, int y, int w, boolean hover) {
-        g.fill(x, y - 3, x + w, y + 15, hover ? UiTheme.ROW_HOVER : UiTheme.PANEL_2);
-        UiTheme.border(g, x, y - 3, w, 18, hover ? UiTheme.ACCENT : 0x407C4DFF);
-        g.drawCenteredString(font, Component.literal(label), x + w / 2, y + 2, UiTheme.TEXT);
+    private void footBtn(GuiGraphics g, int id, String label, int x, int y, int w) {
+        boolean hover = hoverBtn == id;
+        int accent = id == 2 ? UiTheme.DANGER : UiTheme.ACCENT;
+        UiTheme.button(g, x, y, w, 18, hover, accent);
+        g.drawCenteredString(font, Component.literal(label), x + w / 2, y + 5,
+                hover ? UiTheme.TEXT : UiTheme.TEXT_DIM);
     }
 
     private Component soundLabel() {
@@ -160,44 +198,42 @@ public class SelectorScreen extends Screen {
         return label.contains(" (") ? label.substring(0, label.lastIndexOf(" (")) : label;
     }
 
-    private boolean footerKeysRect(double mx, double my) {
-        return UiTheme.inRect(mx, my, panelX() + 10, panelY() + panelH() - FOOTER + 5, 86, 18);
-    }
-    private boolean footerSoundRect(double mx, double my) {
-        return UiTheme.inRect(mx, my, panelX() + 102, panelY() + panelH() - FOOTER + 5, 96, 18);
-    }
-    private boolean footerCloseRect(double mx, double my) {
-        return UiTheme.inRect(mx, my, panelX() + PANEL_W - 26, panelY() + panelH() - FOOTER + 5, 20, 18);
+    private int btnY() { return panelY() + panelH() - FOOTER + 11; }
+    private boolean btnRect(double mx, double my, int id, int x, int w) {
+        return UiTheme.inRect(mx, my, x, btnY() - 3, w, 18);
     }
 
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubled) {
         double mx = event.x(), my = event.y();
         if (event.button() == 0) {
-            int tx = panelX() + 10, ty = panelY() + 36;
-            for (Tab t : tabs()) {
-                int tw = font.width(t.label()) + 12;
-                if (UiTheme.inRect(mx, my, tx, ty, tw, 16)) {
-                    tab = t.id().equals("__all") ? -1 : Integer.parseInt(t.id().substring(5));
+            // сайдбар
+            int sy = listY();
+            List<Side> sides = sides();
+            for (int i = 0; i < sides.size(); i++) {
+                if (UiTheme.inRect(mx, my, sideX(), sy, SIDEBAR_W - 8, 20)) {
+                    tab = sides.get(i).id().equals("__all") ? -1 : Integer.parseInt(sides.get(i).id().substring(5));
                     scroll = 0;
                     return true;
                 }
-                tx += tw + 4;
+                sy += 22;
             }
+            // строки
             if (hoveredRow >= 0 && hoveredRow < visibleRows().size()) {
                 String match = matchOf(visibleRows().get(hoveredRow).label());
                 if (!config.targets.remove(match)) config.targets.add(match);
                 config.save();
                 return true;
             }
-            if (footerKeysRect(mx, my)) { minecraft.setScreen(new KeysScreen(config)); return true; }
-            if (footerSoundRect(mx, my)) {
+            // кнопки
+            if (btnRect(mx, my, 0, panelX() + 10, 92)) { minecraft.setScreen(new KeysScreen(config)); return true; }
+            if (btnRect(mx, my, 1, panelX() + 108, 100)) {
                 config.sound = nextSound(config.sound);
                 config.save();
                 HolySwapClient.playSwapSound(minecraft);
                 return true;
             }
-            if (footerCloseRect(mx, my)) { onClose(); return true; }
+            if (btnRect(mx, my, 2, panelX() + PANEL_W - 34, 24)) { onClose(); return true; }
         }
         return super.mouseClicked(event, doubled);
     }

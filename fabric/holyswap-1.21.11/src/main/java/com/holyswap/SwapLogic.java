@@ -203,7 +203,7 @@ public final class SwapLogic {
         player.displayClientMessage(msg().append(Component.translatable("holyswap.msg.item_missing", match)), true);
     }
 
-    public record Row(String label, Category category, int count) {}
+    public record Row(String label, Category category, int count, ItemStack icon) {}
 
     public static List<Row> listDistinct(LocalPlayer player) {
         Map<String, Row> byLabel = new TreeMap<>();
@@ -215,8 +215,8 @@ public final class SwapLogic {
             if (cat == Category.OTHER) continue;
             String label = describe(stack);
             Row old = byLabel.get(label);
-            byLabel.put(label, old == null ? new Row(label, cat, stack.getCount())
-                                           : new Row(label, cat, old.count() + stack.getCount()));
+            byLabel.put(label, old == null ? new Row(label, cat, stack.getCount(), stack.copy())
+                                           : new Row(label, cat, old.count() + stack.getCount(), old.icon()));
         }
         List<Row> rows = new ArrayList<>(byLabel.values());
         rows.sort(java.util.Comparator.comparingInt(r -> r.category().ordinal()));
