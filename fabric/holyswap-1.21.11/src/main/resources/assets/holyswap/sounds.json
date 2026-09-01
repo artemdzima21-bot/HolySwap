@@ -1,0 +1,6 @@
+{
+  "swap_pop": { "category": "player", "sounds": [ { "name": "holyswap:swap_pop" } ] },
+  "swap_bubble": { "category": "player", "sounds": [ { "name": "holyswap:swap_bubble" } ] },
+  "swap_candy": { "category": "player", "sounds": [ { "name": "holyswap:swap_candy" } ] },
+  "swap_sparkle": { "category": "player", "sounds": [ { "name": "holyswap:swap_sparkle" } ] }
+}

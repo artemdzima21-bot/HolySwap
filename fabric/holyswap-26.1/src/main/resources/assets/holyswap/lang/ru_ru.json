@@ -1,12 +1,15 @@
 {
   "category.holyswap": "HolySwap",
+
   "holyswap.category.talisman": "Талисманы",
   "holyswap.category.talisman_plus": "Талисманы+",
   "holyswap.category.sphere": "Сферы",
   "holyswap.category.sphere_plus": "Сферы+",
   "holyswap.category.totem": "Обычные тотемы",
   "holyswap.category.other": "Прочее",
+
   "holyswap.action.selector": "Открыть селектор",
+
   "holyswap.screen.selector.title": "HolySwap — выбор предметов свапа",
   "holyswap.screen.selector.hint": "Клик — добавить/убрать. Выбрано: %s.",
   "holyswap.screen.selector.keyline": "§b%s§r сферы · §b%s§r сферы+ · §a%s§r талисманы · §e%s§r талисманы+ · §d%s§r тотемы",
@@ -23,17 +26,10 @@
   "holyswap.screen.keys.unknown": "Клавиша %s",
   "holyswap.screen.close": "Закрыть",
   "holyswap.screen.back": "Назад",
+
   "holyswap.msg.swapped": "%s: %s",
   "holyswap.msg.none": "%s: подходящих предметов нет",
   "holyswap.msg.none_selected": "подходящих предметов нет (выбери их на §o%s§r)",
   "holyswap.msg.only_in_offhand": "предмет категории уже в левой руке, других в инвентаре нет",
-  "holyswap.msg.offhand_unselected": "§7предмет в левой руке («%s») не выбран в селекторе — добавь его на §o%s§r, иначе цикл собьётся",
-  "holyswap.msg.item_missing": "«%s» нет в инвентаре",
-  "holyswap.screen.sound": "Звук: %s",
-  "holyswap.screen.sound_tooltip": "Звук успешного свапа. Нажимай, чтобы переключить (последний вариант — без звука).",
-  "holyswap.sound.none": "Без звука",
-  "holyswap.sound.pop": "Поп",
-  "holyswap.sound.bubble": "Буль",
-  "holyswap.sound.candy": "Конфетка",
-  "holyswap.sound.sparkle": "Сияние"
+  "holyswap.msg.offhand_unselected": "§7предмет в левой руке («%s») не выбран в селекторе — добавь его на §o%s§r, иначе цикл собьётся"
 }

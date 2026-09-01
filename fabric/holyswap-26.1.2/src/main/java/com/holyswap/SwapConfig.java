@@ -12,25 +12,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Список "целей" свапа и назначенные клавиши.
- * Цель — точное отображаемое имя предмета ("Талисман Воромана");
- * клавиша — GLFW KEYSYM-код, действие -> код.
- */
 public class SwapConfig {
     public List<String> targets = new ArrayList<>();
     public Map<String, Integer> keys = new LinkedHashMap<>();
-    /** Звук успешного свапа: none | pop | bubble | candy | sparkle. */
-    public String sound = "pop";
-    /** Правила классификации: категория -> ключевые слова (в нижнем регистре). */
-    public Map<String, List<String>> patterns = defaultPatterns();
-
-    public static Map<String, List<String>> defaultPatterns() {
-        Map<String, List<String>> m = new LinkedHashMap<>();
-        m.put("sphere", new ArrayList<>(List.of("сфера", "sphere")));
-        m.put("talisman", new ArrayList<>(List.of("талисман", "talisman")));
-        return m;
-    }
 
     public static final String ACT_TALISMAN = "talisman";
     public static final String ACT_SPHERE = "sphere";
@@ -38,11 +22,8 @@ public class SwapConfig {
     public static final String ACT_TALISMAN_PLUS = "talisman_plus";
     public static final String ACT_TOTEM = "totem";
     public static final String ACT_SELECTOR = "selector";
-    /** Префикс действий «своя кнопка на конкретный предмет»: item:<имя>. */
-    public static final String ACT_ITEM_PREFIX = "item:";
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    // У каждой версии Minecraft свой конфиг — новые версии стартуют с заводских настроек.
     private static final Path PATH = FabricLoader.getInstance().getConfigDir()
             .resolve("holyswap-" + FabricLoader.getInstance().getRawGameVersion() + ".json");
 

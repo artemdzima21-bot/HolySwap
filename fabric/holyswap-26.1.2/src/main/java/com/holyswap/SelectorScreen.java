@@ -9,10 +9,6 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Экран-селектор: предметы по категориям, клик — добавить/убрать из цикла свапа.
- * Порт под 1.21.11 (Mojang-имена).
- */
 public class SelectorScreen extends Screen {
     private final SwapConfig config;
     private final List<SwapLogic.Row> rows = new ArrayList<>();
@@ -22,19 +18,6 @@ public class SelectorScreen extends Screen {
     public SelectorScreen(SwapConfig config) {
         super(Component.translatable("holyswap.screen.selector.title"));
         this.config = config;
-    }
-
-    private static final List<String> SOUNDS = List.of("none", "pop", "bubble", "candy", "sparkle");
-
-    private Component soundLabel() {
-        String cur = SOUNDS.contains(config.sound) ? config.sound : "pop";
-        return Component.translatable("holyswap.screen.sound",
-                Component.translatable("holyswap.sound." + cur));
-    }
-
-    private static String nextSound(String cur) {
-        int i = SOUNDS.indexOf(SOUNDS.contains(cur) ? cur : "pop");
-        return SOUNDS.get((i + 1) % SOUNDS.size());
     }
 
     @Override
@@ -85,15 +68,6 @@ public class SelectorScreen extends Screen {
                         btn -> minecraft.setScreen(new KeysScreen(config)))
                 .bounds(this.width / 2 - 180, this.height - 30, 120, 20)
                 .tooltip(Tooltip.create(Component.translatable("holyswap.screen.selector.keys_tooltip")))
-                .build());
-        addRenderableWidget(Button.builder(soundLabel(), btn -> {
-                    config.sound = nextSound(config.sound);
-                    config.save();
-                    HolySwapClient.playSwapSound(minecraft);
-                    rebuildButtons();
-                })
-                .bounds(this.width / 2 - 55, this.height - 30, 110, 20)
-                .tooltip(Tooltip.create(Component.translatable("holyswap.screen.sound_tooltip")))
                 .build());
         addRenderableWidget(Button.builder(Component.translatable("holyswap.screen.close"), btn -> onClose())
                 .bounds(this.width / 2 + 60, this.height - 30, 120, 20).build());

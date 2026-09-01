@@ -15,11 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-/**
- * Свап эмулирует ровно то, что делает ванильная клавиша F:
- * handleInventoryMouseClick c ClickType.SWAP и кнопкой 40 (оффхенд) по inventoryMenu.
- * Для сервера это неотличимо от обычного игрока. Порт под 1.21.11 (Mojang-имена).
- */
 public final class SwapLogic {
 
     public record Candidate(int handlerSlot, String label, Category category) {}
@@ -45,34 +40,21 @@ public final class SwapLogic {
         }
     }
 
-    /** Тотем — только нетронутый totem_of_undying; ключевые слова — из конфига. */
     public static Category classify(ItemStack stack) {
         String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         String name = stack.getHoverName().getString().toLowerCase();
-        Map<String, List<String>> pat = HolySwapClient.CONFIG.patterns;
-        boolean sphere = matches(name, pat.get("sphere"));
-        boolean talisman = matches(name, pat.get("talisman"));
-        if (id.equals("minecraft:totem_of_undying")) {
-            String vanilla = Component.translatable("item.minecraft.totem_of_undying").getString().toLowerCase();
-            if (!name.equals(vanilla) || (talisman || sphere)) {
-                if (sphere) return name.contains("+") ? Category.SPHERE_PLUS : Category.SPHERE;
-                return name.contains("+") ? Category.TALISMAN_PLUS : Category.TALISMAN;
-            }
+        if (id.equals("minecraft:totem_of_undying") && !name.contains("талисман") && !name.contains("сфера")
+                && !name.contains("talisman") && !name.contains("sphere")) {
             return Category.TOTEM;
         }
-        if (sphere) return name.contains("+") ? Category.SPHERE_PLUS : Category.SPHERE;
-        if (talisman) return name.contains("+") ? Category.TALISMAN_PLUS : Category.TALISMAN;
+        if (name.contains("сфера") || name.contains("sphere")) {
+            return name.contains("+") ? Category.SPHERE_PLUS : Category.SPHERE;
+        }
+        if (name.contains("талисман") || name.contains("talisman")) {
+            return name.contains("+") ? Category.TALISMAN_PLUS : Category.TALISMAN;
+        }
         return Category.OTHER;
     }
-
-    private static boolean matches(String name, List<String> keywords) {
-        if (keywords == null) return false;
-        for (String kw : keywords) {
-            if (!kw.isEmpty() && name.contains(kw.toLowerCase())) return true;
-        }
-        return false;
-    }
-
 
     public static List<Candidate> findMatching(LocalPlayer player, SwapConfig config, Category cat) {
         List<Candidate> out = new ArrayList<>();
@@ -93,7 +75,6 @@ public final class SwapLogic {
         cycleSwap(client, config, List.of(cat));
     }
 
-    /** Общая кнопка листает категории, одиночная — предметы внутри категории. */
     public static void cycleSwap(Minecraft client, SwapConfig config, List<Category> cats) {
         LocalPlayer player = client.player;
         if (player == null) return;
@@ -121,11 +102,11 @@ public final class SwapLogic {
             if (!off.isEmpty() && describe(off).equals(chosen.label())) continue;
             swapToOffhand(client, chosen.handlerSlot());
             player.displayClientMessage(msg().append(Component.translatable("holyswap.msg.swapped",
-                    Component.literal(cat.colorTag + cat.title() + "§r"), chosen.label())), true);
+                    Component.literal(cat.colorTag + cat.title() + "§r"), chosen.label())), false);
             return;
         }
         player.displayClientMessage(msg().append(Component.translatable(
-                "holyswap.msg.none_selected", selectorKeyName())), true);
+                "holyswap.msg.none_selected", selectorKeyName())), false);
     }
 
     private static void cycleWithinCategory(Minecraft client, SwapConfig config,
@@ -134,10 +115,10 @@ public final class SwapLogic {
         if (candidates.isEmpty()) {
             ItemStack off = player.getOffhandItem();
             if (!off.isEmpty() && classify(off) == cat) {
-                player.displayClientMessage(msg().append(Component.translatable("holyswap.msg.only_in_offhand")), true);
+                player.displayClientMessage(msg().append(Component.translatable("holyswap.msg.only_in_offhand")), false);
             } else {
                 player.displayClientMessage(msg().append(Component.translatable("holyswap.msg.none",
-                        Component.literal(cat.colorTag + cat.title() + "§r"))), true);
+                        Component.literal(cat.colorTag + cat.title() + "§r"))), false);
             }
             return;
         }
@@ -155,13 +136,13 @@ public final class SwapLogic {
             }
             if (!offAccounted && classify(off) == cat) {
                 player.displayClientMessage(msg().append(Component.translatable("holyswap.msg.offhand_unselected",
-                        off.getHoverName().getString(), selectorKeyName())), true);
+                        off.getHoverName().getString(), selectorKeyName())), false);
             }
         }
         Candidate chosen = candidates.get(next);
         swapToOffhand(client, chosen.handlerSlot());
         player.displayClientMessage(msg().append(Component.translatable("holyswap.msg.swapped",
-                Component.literal(cat.colorTag + cat.title() + "§r"), chosen.label())), true);
+                Component.literal(cat.colorTag + cat.title() + "§r"), chosen.label())), false);
     }
 
     private static MutableComponent msg() {
@@ -180,27 +161,10 @@ public final class SwapLogic {
     }
 
     public static void swapToOffhand(Minecraft client, int slot) {
-        HolySwapClient.playSwapSound(client);
         LocalPlayer player = client.player;
         if (player == null || client.gameMode == null) return;
         client.gameMode.handleInventoryMouseClick(
                 player.inventoryMenu.containerId, slot, 40, ClickType.SWAP, player);
-    }
-
-    /** Свап конкретного предмета (по имени до " (") — своя кнопка на каждый предмет. */
-    public static void swapExactItem(Minecraft client, SwapConfig config, String match) {
-        LocalPlayer player = client.player;
-        if (player == null) return;
-        var menu = player.inventoryMenu;
-        for (int slot = 9; slot <= 45; slot++) {
-            ItemStack stack = menu.getSlot(slot).getItem();
-            if (stack.isEmpty()) continue;
-            String label = stack.getHoverName().getString();
-            if (!label.equals(match)) continue;
-            swapToOffhand(client, slot);
-            return;
-        }
-        player.displayClientMessage(msg().append(Component.translatable("holyswap.msg.item_missing", match)), true);
     }
 
     public record Row(String label, Category category, int count) {}

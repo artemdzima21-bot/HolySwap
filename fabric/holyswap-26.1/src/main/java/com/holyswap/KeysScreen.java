@@ -16,27 +16,15 @@ import java.util.List;
  * Порт под 1.21.11 (Mojang-имена, KeyEvent вместо трёх int).
  */
 public class KeysScreen extends Screen {
-    private record Act(String id, String label) {}
-
-    /** Фиксированные действия + отдельная строка на каждую сферу в инвентаре. */
-    private List<Act> actions() {
-        List<Act> out = new ArrayList<>(List.of(
-                new Act(SwapConfig.ACT_TALISMAN, Component.translatable("holyswap.category.talisman").getString()),
-                new Act(SwapConfig.ACT_SPHERE, Component.translatable("holyswap.category.sphere").getString()),
-                new Act(SwapConfig.ACT_SPHERE_PLUS, Component.translatable("holyswap.category.sphere_plus").getString()),
-                new Act(SwapConfig.ACT_TALISMAN_PLUS, Component.translatable("holyswap.category.talisman_plus").getString()),
-                new Act(SwapConfig.ACT_TOTEM, Component.translatable("holyswap.category.totem").getString()),
-                new Act(SwapConfig.ACT_SELECTOR, Component.translatable("holyswap.action.selector").getString())
-        ));
-        if (minecraft != null && minecraft.player != null) {
-            for (SwapLogic.Row row : SwapLogic.listDistinct(minecraft.player)) {
-                String match = row.label().contains(" (")
-                        ? row.label().substring(0, row.label().lastIndexOf(" (")) : row.label();
-                out.add(new Act(SwapConfig.ACT_ITEM_PREFIX + match, match));
-            }
-        }
-        return out;
-    }
+    private record Act(String id, String titleKey) {}
+    private static final List<Act> ACTIONS = List.of(
+            new Act(SwapConfig.ACT_TALISMAN, "holyswap.category.talisman"),
+            new Act(SwapConfig.ACT_SPHERE, "holyswap.category.sphere"),
+            new Act(SwapConfig.ACT_SPHERE_PLUS, "holyswap.category.sphere_plus"),
+            new Act(SwapConfig.ACT_TALISMAN_PLUS, "holyswap.category.talisman_plus"),
+            new Act(SwapConfig.ACT_TOTEM, "holyswap.category.totem"),
+            new Act(SwapConfig.ACT_SELECTOR, "holyswap.action.selector")
+    );
 
     private final SwapConfig config;
     private int listening = -1;
@@ -53,20 +41,19 @@ public class KeysScreen extends Screen {
 
     private void rebuild() {
         clearWidgets();
-        List<Act> acts = actions();
         int y = 45;
-        for (int i = 0; i < acts.size(); i++) {
+        for (int i = 0; i < ACTIONS.size(); i++) {
             final int idx = i;
-            Act act = acts.get(i);
+            Act act = ACTIONS.get(i);
             int code = config.keyFor(act.id, HolySwapClient.defKey(act.id));
             String keyName = listening == idx ? "§e" + Component.translatable("holyswap.screen.keys.listening").getString()
                                               : SwapLogic.keyName(code, "—");
             String shared = "";
             if (listening != idx && code != GLFW.GLFW_KEY_UNKNOWN) {
                 List<String> others = new ArrayList<>();
-                for (int j = 0; j < acts.size(); j++) {
-                    if (j != idx && config.keyFor(acts.get(j).id, HolySwapClient.defKey(acts.get(j).id)) == code) {
-                        others.add(acts.get(j).label());
+                for (int j = 0; j < ACTIONS.size(); j++) {
+                    if (j != idx && config.keyFor(ACTIONS.get(j).id, HolySwapClient.defKey(ACTIONS.get(j).id)) == code) {
+                        others.add(Component.translatable(ACTIONS.get(j).titleKey).getString());
                     }
                 }
                 if (!others.isEmpty()) {
@@ -74,7 +61,7 @@ public class KeysScreen extends Screen {
                             String.join(", ", others)).getString() + ")";
                 }
             }
-            final String display = act.label() + ": §b" + keyName + shared;
+            final String display = Component.translatable(act.titleKey).getString() + ": §b" + keyName + shared;
             Button b = Button.builder(Component.literal(display), btn -> {
                                 listening = (listening == idx ? -1 : idx);
                                 rebuild();
@@ -85,13 +72,7 @@ public class KeysScreen extends Screen {
             y += 24;
         }
         addRenderableWidget(Button.builder(Component.translatable("holyswap.screen.keys.reset"), btn -> {
-                    for (Act act : acts) {
-                        if (act.id().startsWith(SwapConfig.ACT_ITEM_PREFIX)) {
-                            config.keys.remove(act.id());
-                        } else {
-                            config.setKey(act.id(), HolySwapClient.defKey(act.id()));
-                        }
-                    }
+                    for (Act act : ACTIONS) config.setKey(act.id, HolySwapClient.defKey(act.id));
                     rebuild();
                 })
                 .bounds(this.width / 2 - 130, y + 8, 260, 20)
@@ -105,8 +86,8 @@ public class KeysScreen extends Screen {
     public boolean keyPressed(KeyEvent event) {
         if (listening >= 0) {
             if (event.key() != GLFW.GLFW_KEY_ESCAPE) {
-                Act act = actions().get(listening);
-                config.setKey(act.id(), event.key());
+                Act act = ACTIONS.get(listening);
+                config.setKey(act.id, event.key());
             }
             listening = -1;
             rebuild();

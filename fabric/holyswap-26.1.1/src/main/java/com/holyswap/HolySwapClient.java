@@ -12,40 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Действия группируются по клавише: одна кнопка — одно или несколько действий.
- * Клавиатура опрашивается напрямую через GLFW (edge-detection) — бинды меняются
- * на лету из экрана «Клавиши», InputUtil в новых версиях больше нет.
- */
 public class HolySwapClient implements ClientModInitializer {
     public static final SwapConfig CONFIG = SwapConfig.load();
-
-    /** Звуки успешного свапа; выбор — в селекторе, "none" выключает. */
-    public static final net.minecraft.sounds.SoundEvent SND_POP = register("swap_pop");
-    public static final net.minecraft.sounds.SoundEvent SND_BUBBLE = register("swap_bubble");
-    public static final net.minecraft.sounds.SoundEvent SND_CANDY = register("swap_candy");
-    public static final net.minecraft.sounds.SoundEvent SND_SPARKLE = register("swap_sparkle");
-
-    private static net.minecraft.sounds.SoundEvent register(String name) {
-        var id = net.minecraft.resources.Identifier.fromNamespaceAndPath("holyswap", name);
-        return net.minecraft.core.Registry.register(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT,
-                id, net.minecraft.sounds.SoundEvent.createVariableRangeEvent(id));
-    }
-
-    /** Проиграть выбранный в конфиге звук (если он не "none"). */
-    public static void playSwapSound(Minecraft client) {
-        net.minecraft.sounds.SoundEvent ev = switch (CONFIG.sound) {
-            case "pop" -> SND_POP;
-            case "bubble" -> SND_BUBBLE;
-            case "candy" -> SND_CANDY;
-            case "sparkle" -> SND_SPARKLE;
-            default -> null;
-        };
-        if (ev != null) {
-            client.getSoundManager().play(
-                    net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(ev, 1.0f));
-        }
-    }
 
     public static int defKey(String action) {
         return switch (action) {
@@ -81,18 +49,9 @@ public class HolySwapClient implements ClientModInitializer {
             }
             long window = client.getWindow().handle();
             Map<Integer, List<String>> groups = new HashMap<>();
-            List<String> actions = new ArrayList<>(List.of(SwapConfig.ACT_TALISMAN, SwapConfig.ACT_SPHERE,
+            for (String act : List.of(SwapConfig.ACT_TALISMAN, SwapConfig.ACT_SPHERE,
                     SwapConfig.ACT_SPHERE_PLUS,
-                    SwapConfig.ACT_TALISMAN_PLUS, SwapConfig.ACT_TOTEM, SwapConfig.ACT_SELECTOR));
-            // Своя кнопка на каждый предмет из селектора
-            if (client.player != null) {
-                for (SwapLogic.Row row : SwapLogic.listDistinct(client.player)) {
-                    String match = row.label().contains(" (")
-                            ? row.label().substring(0, row.label().lastIndexOf(" (")) : row.label();
-                    actions.add(SwapConfig.ACT_ITEM_PREFIX + match);
-                }
-            }
-            for (String act : actions) {
+                    SwapConfig.ACT_TALISMAN_PLUS, SwapConfig.ACT_TOTEM, SwapConfig.ACT_SELECTOR)) {
                 int code = CONFIG.keyFor(act, defKey(act));
                 if (code == GLFW.GLFW_KEY_UNKNOWN) continue;
                 groups.computeIfAbsent(code, k -> new ArrayList<>()).add(act);
@@ -112,13 +71,6 @@ public class HolySwapClient implements ClientModInitializer {
         if (actions.contains(SwapConfig.ACT_SELECTOR)) {
             client.setScreen(new SelectorScreen(CONFIG));
             return;
-        }
-        // Конкретный предмет — приоритет над циклом по категории
-        for (String act : actions) {
-            if (act.startsWith(SwapConfig.ACT_ITEM_PREFIX)) {
-                SwapLogic.swapExactItem(client, CONFIG, act.substring(SwapConfig.ACT_ITEM_PREFIX.length()));
-                return;
-            }
         }
         List<SwapLogic.Category> cats = new ArrayList<>();
         for (String act : actions) {
